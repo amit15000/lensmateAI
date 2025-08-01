@@ -1,7 +1,6 @@
 import { extractFrames } from "../utils/frameExtractor.js";
 import { analyzeVideoAI } from "../utils/ai/analyzeVideoAI.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
-import Project from "../models/Project.js";
 
 export const analyzeVideo = async (req, res) => {
   try {
@@ -12,26 +11,52 @@ export const analyzeVideo = async (req, res) => {
         .json({ success: false, message: "fileUrl and gear are required" });
     }
 
-    // ✅ Step 1: Extract frames locally
-    const frames = await extractFrames(fileUrl, "temp/frames", true);
+    console.log("🎬 Starting video analysis for:", fileUrl);
 
-    // ✅ Step 2: Upload frames to Cloudinary
+    // ✅ Step 1: Extract frames (limit to 8 for diversity)
+    const frames = await extractFrames(fileUrl, "temp/frames", true);
+    console.log(`✅ Frame extraction complete. Total frames: ${frames.length}`);
+
+    // ✅ Step 2: Pick a subset of 5 frames for AI (avoid overload)
+    const selectedFrames = frames.slice(0, 5);
+    console.log("📸 Selected frames:", selectedFrames);
+
+    // ✅ Step 3: Upload selected frames to Cloudinary (with compression)
     const uploadedFrameUrls = [];
-    for (const frame of frames) {
-      const url = await uploadToCloudinary(frame); // upload each frame
+    for (const frame of selectedFrames) {
+      const url = await uploadToCloudinary(frame, {
+        transformation: { width: 640, quality: "auto" }, // Reduce size for speed
+      });
       uploadedFrameUrls.push(url);
     }
 
-    // ✅ Step 3: Analyze via OpenAI Vision using URLs
+    console.log("☁️ Uploaded frame URLs:", uploadedFrameUrls);
+
+    // ✅ Step 4: Analyze frames using OpenAI Vision
     const aiSuggestions = await analyzeVideoAI(uploadedFrameUrls, gear);
 
-    // ✅ Step 4: Save to DB
-    const project = await Project.create({ fileUrl, gear, aiSuggestions });
-    res.status(200).json({ success: true, data: project });
+    // ✅ Step 5: Generate dynamic title (from AI or fallback)
+    const title =
+      aiSuggestions.title ||
+      `Cinematic Video - ${new Date().toLocaleDateString()}`;
+
+    // ✅ Step 6: Return response (aiSuggestions only for saving)
+    res.status(200).json({
+      success: true,
+      data: {
+        fileUrl,
+        gear,
+        aiSuggestions, // Store this in DB for video projects
+        type: "video",
+        title,
+      },
+    });
   } catch (err) {
-    console.error("Analyze Video Error:", err);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    console.error("❌ Analyze Video Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error during video analysis",
+      error: err.message,
+    });
   }
 };

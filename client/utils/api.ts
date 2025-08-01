@@ -52,20 +52,34 @@ export const analyzeVideo = async (data: {
   }
 };
 
-// 🔹 (Optional) Fetch single project (if backend supports)
-export const getProject = async (id: string) => {
+export const getSuggestions = async (currentProjectId?: string) => {
   try {
-    const response = await api.get(`/analyze/${id}`);
-    return response.data;
+    const response = await api.get(`/projects/suggestions`, {
+      params: currentProjectId ? { currentProjectId } : {},
+    });
+    return response.data; // returns [{id, title, thumbnail, type, timestamp}]
   } catch (err: any) {
-    console.error("Get Project Error:", err.response?.data || err.message);
-    throw new Error(err.response?.data?.message || "Failed to fetch project");
+    console.error("Get Suggestions Error:", err.response?.data || err.message);
+    throw new Error(
+      err.response?.data?.message || "Failed to fetch suggestions"
+    );
   }
 };
 
-export const saveProject = async (project: any) => {
-  const response = await api.post("/analyze/saveAnalysis", project);
-  return response.data;
+export const saveCurrentProject = async (project: {
+  fileUrl: string;
+  gear: any;
+  aiSuggestions: any;
+  type: "image" | "video";
+  title: string;
+}) => {
+  try {
+    const response = await api.post("/projects/save", project);
+    return response.data;
+  } catch (err: any) {
+    console.error("Save Project Error:", err.response?.data || err.message);
+    throw new Error(err.response?.data?.message || "Failed to save project");
+  }
 };
 
 export default api;

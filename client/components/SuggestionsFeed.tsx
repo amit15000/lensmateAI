@@ -1,200 +1,158 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Clock, ImageIcon, Video, Bookmark } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useProjectStore } from "@/store/useProjectStore"
-import { getProjects } from "@/utils/api"
+import { useState, useEffect } from "react";
+import { Clock, ImageIcon, Video, Bookmark } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useProjectStore } from "@/store/useProjectStore";
+import { getSuggestions, saveCurrentProject } from "@/utils/api";
+import { toast } from "react-hot-toast"; // ✅ For notifications
 
 interface Project {
-  id: string
-  title: string
-  thumbnail: string
-  type: "image" | "video"
-  timestamp: string
-  isActive?: boolean
+  id: string;
+  title: string;
+  thumbnail: string;
+  type: "image" | "video";
+  timestamp: string;
+  fileUrl?: string;
+  gear?: any;
+  aiSuggestions?: any;
 }
 
 export function SuggestionsFeed() {
-  const { loadProject } = useProjectStore()
-  const [recentProjects, setRecentProjects] = useState<Project[]>([])
-  const [savedSuggestions, setSavedSuggestions] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  const { loadProject, currentProject } = useProjectStore();
+  const [suggestions, setSuggestions] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadProjects()
-  }, [])
+    loadSuggestions();
+  }, [currentProject]);
 
-  const loadProjects = async () => {
+  const loadSuggestions = async () => {
     try {
-      const projects = await getProjects()
-
-      // Mock data for demonstration
-      const mockRecent: Project[] = [
-        {
-          id: "1",
-          title: "Mountain Sunrise",
-          thumbnail: "/placeholder.svg?height=80&width=120",
-          type: "image",
-          timestamp: "Just now",
-          isActive: true,
-        },
-        {
-          id: "2",
-          title: "Night City",
-          thumbnail: "/placeholder.svg?height=80&width=120",
-          type: "video",
-          timestamp: "Yesterday",
-        },
-        {
-          id: "3",
-          title: "Beach Sunset",
-          thumbnail: "/placeholder.svg?height=80&width=120",
-          type: "image",
-          timestamp: "2 days ago",
-        },
-      ]
-
-      const mockSaved: Project[] = [
-        {
-          id: "4",
-          title: "Drone Orbit",
-          thumbnail: "/placeholder.svg?height=60&width=60",
-          type: "video",
-          timestamp: "1 week ago",
-        },
-      ]
-
-      setRecentProjects(mockRecent)
-      setSavedSuggestions(mockSaved)
+      const result = await getSuggestions(currentProject?.id);
+      setSuggestions(result);
     } catch (error) {
-      console.error("Failed to load projects:", error)
+      console.error("Failed to load suggestions:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleProjectClick = async (projectId: string) => {
     try {
-      await loadProject(projectId)
+      await loadProject(projectId);
     } catch (error) {
-      console.error("Failed to load project:", error)
+      console.error("Failed to load project:", error);
     }
-  }
+  };
 
-  if (loading) {
-    return <SuggestionsFeedSkeleton />
-  }
+  // ✅ Save Current Project
+  const handleSave = async () => {
+    if (!currentProject) {
+      toast.error("No project to save!");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await saveCurrentProject({
+        fileUrl: currentProject.fileUrl,
+        gear: currentProject.gear,
+        aiSuggestions: currentProject.aiSuggestions,
+        type: currentProject.type,
+        title: currentProject.title,
+      });
+      toast.success("Project saved successfully!");
+      loadSuggestions(); // ✅ Refresh suggestions after saving
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save project");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <SuggestionsFeedSkeleton />;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="text-right">
-        <h2 className="text-lg font-semibold text-gray-200">SUGGESTIONS FEED</h2>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Suggestions Feed
+        </h2>
       </div>
 
-      {/* Recent Uploads */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">Recent Uploads</h3>
-
-        <div className="space-y-3">
-          {recentProjects.map((project) => (
-            <div
-              key={project.id}
-              className={`group cursor-pointer rounded-lg p-3 transition-colors ${
-                project.isActive ? "bg-blue-600/20 border border-blue-600/30" : "hover:bg-gray-700/50"
-              }`}
-              onClick={() => handleProjectClick(project.id)}
-            >
-              <div className="flex space-x-3">
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={project.thumbnail || "/placeholder.svg"}
-                    alt={project.title}
-                    className="w-16 h-12 object-cover rounded"
-                  />
-                  <div className="absolute top-1 right-1">
-                    {project.type === "video" ? (
-                      <Video className="w-3 h-3 text-white" />
-                    ) : (
-                      <ImageIcon className="w-3 h-3 text-white" />
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm text-white truncate">{project.title}</h4>
-                  <div className="flex items-center space-x-1 mt-1">
-                    <Clock className="w-3 h-3 text-gray-400" />
-                    <span className="text-xs text-gray-400">{project.timestamp}</span>
-                  </div>
-                </div>
-
-                {project.isActive && (
-                  <div className="flex-shrink-0">
-                    <div className="px-2 py-1 bg-blue-600 text-xs rounded text-white">Active</div>
-                  </div>
+      {/* Suggestions */}
+      <div className="space-y-4">
+        {suggestions.map((project) => (
+          <div
+            key={project.id}
+            className={`group cursor-pointer rounded-xl overflow-hidden shadow-md border border-gray-700 transition-all duration-200 ${
+              currentProject?.id === project.id
+                ? "ring-2 ring-blue-500"
+                : "hover:border-gray-600 hover:shadow-lg"
+            }`}
+            onClick={() => handleProjectClick(project.id)}
+          >
+            {/* Thumbnail */}
+            <div className="relative">
+              <img
+                src={project.thumbnail || "/placeholder.svg"}
+                alt={project.title}
+                className="w-full h-32 object-cover"
+              />
+              <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-full p-1.5">
+                {project.type === "video" ? (
+                  <Video className="w-4 h-4 text-white" />
+                ) : (
+                  <ImageIcon className="w-4 h-4 text-white" />
                 )}
               </div>
+              {currentProject?.id === project.id && (
+                <span className="absolute bottom-2 right-2 bg-blue-600 text-white text-xs font-medium px-2 py-0.5 rounded">
+                  Active
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Saved Suggestions */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">Saved Suggestions</h3>
-
-        <div className="space-y-3">
-          {savedSuggestions.map((suggestion) => (
-            <div
-              key={suggestion.id}
-              className="group cursor-pointer hover:bg-gray-700/50 rounded-lg p-3 transition-colors"
-              onClick={() => handleProjectClick(suggestion.id)}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Bookmark className="w-4 h-4 text-gray-300" />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm text-white truncate">{suggestion.title}</h4>
-                </div>
+            {/* Info */}
+            <div className="p-3 bg-gray-800">
+              <h4 className="font-medium text-white text-sm truncate">
+                {project.title}
+              </h4>
+              <div className="flex items-center space-x-1 mt-1">
+                <Clock className="w-3 h-3 text-gray-400" />
+                <span className="text-xs text-gray-400">
+                  {project.timestamp}
+                </span>
               </div>
             </div>
-          ))}
-
-          <Button variant="outline" className="w-full bg-gray-700 border-gray-600 hover:bg-gray-600 text-sm">
-            <Bookmark className="w-4 h-4 mr-2" />
-            Save Current Suggestion
-          </Button>
-        </div>
+          </div>
+        ))}
       </div>
     </div>
-  )
+  );
 }
 
 function SuggestionsFeedSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-pulse">
       <div className="text-right">
-        <div className="shimmer h-6 bg-gray-700 rounded w-32 ml-auto" />
+        <div className="h-4 bg-gray-700 rounded w-32 ml-auto" />
       </div>
-
-      <div className="space-y-3">
-        <div className="shimmer h-4 bg-gray-700 rounded w-24" />
-
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex space-x-3 p-3">
-              <div className="shimmer w-16 h-12 bg-gray-700 rounded" />
-              <div className="flex-1 space-y-2">
-                <div className="shimmer h-4 bg-gray-700 rounded w-3/4" />
-                <div className="shimmer h-3 bg-gray-700 rounded w-1/2" />
-              </div>
-            </div>
-          ))}
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="rounded-xl overflow-hidden shadow-md border border-gray-700"
+        >
+          <div className="h-32 bg-gray-700" />
+          <div className="p-3 space-y-2 bg-gray-800">
+            <div className="h-4 bg-gray-700 rounded w-3/4" />
+            <div className="h-3 bg-gray-700 rounded w-1/2" />
+          </div>
         </div>
-      </div>
+      ))}
     </div>
-  )
+  );
 }

@@ -4,10 +4,13 @@ import { create } from "zustand";
 import {
   analyzeImage,
   analyzeVideo,
-  getProject,
-  saveProject,
+  getSuggestions,
+  saveCurrentProject,
 } from "@/utils/api";
 import toast from "react-hot-toast";
+import api from "@/utils/api";
+
+// ---------------- Interfaces ----------------
 
 interface UploadedFile {
   url: string;
@@ -22,15 +25,15 @@ interface Gear {
 }
 
 interface Analysis {
-  angles?: string;
-  settings?: {
+  angles: string;
+  settings: {
     aperture: string;
     ISO: string;
     shutter: string;
     fov?: string;
     focusDistance?: string;
   };
-  environment?: {
+  environment: {
     lighting: string;
     mood: string;
   };
@@ -53,21 +56,17 @@ interface ShotPlan {
 
 interface VideoScene {
   sceneId: number;
+  title: string;
   description: string;
   angles: string;
   settings: { aperture: string; ISO: string; shutter: string };
-  shotPlan: {
-    path: Array<{
-      x: number;
-      y: number;
-      z: number;
-      pitch?: number;
-      yaw?: number;
-      roll?: number;
-      duration?: number;
-    }>;
-    lookAt?: { x: number; y: number; z: number };
-  };
+  shotPlan: ShotPlan;
+  environment: { lighting: string; mood: string };
+}
+
+interface Animation {
+  shotPlan: ShotPlan;
+  scenes?: VideoScene[];
 }
 
 interface Project {
@@ -76,9 +75,8 @@ interface Project {
   type: "image" | "video";
   fileUrl: string;
   gear: Gear;
-  analysis?: Analysis;
-  shotPlan?: ShotPlan;
-  videoScenes?: VideoScene[];
+  analysis: Analysis;
+  animation: Animation;
   timestamp: string;
 }
 
@@ -86,8 +84,10 @@ interface ProjectStore {
   uploadedFile: UploadedFile | null;
   gear: Gear;
   currentProject: Project | null;
+  suggestions: Project[];
   isUploading: boolean;
   isAnalyzing: boolean;
+  isSaving: boolean;
 
   setUploadedFile: (file: UploadedFile | null) => void;
   setGear: (gear: Gear) => void;
@@ -95,15 +95,20 @@ interface ProjectStore {
   analyzeScene: (file: UploadedFile, gear: Gear) => Promise<void>;
   loadProject: (id: string) => Promise<void>;
   saveCurrentSuggestion: () => Promise<void>;
+  refreshSuggestions: () => Promise<void>;
   exportShotPlan: () => void;
 }
+
+// ---------------- Zustand Store ----------------
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   uploadedFile: null,
   gear: { camera: "Sony A7S III", lens: "24-70mm" },
   currentProject: null,
+  suggestions: [],
   isUploading: false,
   isAnalyzing: false,
+  isSaving: false,
 
   setUploadedFile: (file) => set({ uploadedFile: file }),
   setGear: (gear) => set({ gear }),
@@ -112,35 +117,30 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   analyzeScene: async (file, gear) => {
     set({ isAnalyzing: true });
     try {
-      let response;
+      const response =
+        file.type === "image"
+          ? await analyzeImage({ fileUrl: file.url, gear })
+          : await analyzeVideo({ fileUrl: file.url, gear });
 
-      if (file.type === "image") {
-        response = await analyzeImage({ fileUrl: file.url, gear });
-      } else {
-        response = await analyzeVideo({ fileUrl: file.url, gear });
-      }
-
-      if (!response.success || !response.data) {
+      if (!response.success || !response.data)
         throw new Error("Invalid AI response");
-      }
 
       const aiData = response.data.aiSuggestions || response.data;
 
       const project: Project = {
-        title: file.name.split(".")[0] || "Untitled Project",
+        title: aiData.title || file.name.split(".")[0] || "Untitled Project",
         type: file.type,
         fileUrl: file.url,
         gear,
-        analysis:
-          file.type === "image"
-            ? {
-                angles: aiData.angles,
-                settings: aiData.settings,
-                environment: aiData.environment,
-              }
-            : undefined,
-        shotPlan: file.type === "image" ? aiData.shotPlan : undefined,
-        videoScenes: file.type === "video" ? aiData.scenes || [] : undefined,
+        analysis: {
+          angles: aiData.angles,
+          settings: aiData.settings,
+          environment: aiData.environment,
+        },
+        animation: {
+          shotPlan: aiData.shotPlan,
+          scenes: file.type === "video" ? aiData.scenes || [] : undefined,
+        },
         timestamp: new Date().toISOString(),
       };
 
@@ -156,8 +156,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   loadProject: async (id) => {
     try {
-      const project = await getProject(id);
-      set({ currentProject: project });
+      const response = await api.get(`/projects/${id}`);
+      set({ currentProject: response.data });
     } catch (error) {
       console.error("Failed to load project:", error);
       toast.error("Failed to load project");
@@ -165,25 +165,60 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   saveCurrentSuggestion: async () => {
-    const { currentProject } = get();
+    const { currentProject, refreshSuggestions } = get();
     if (!currentProject) {
       toast.error("No project to save");
       return;
     }
 
+    set({ isSaving: true });
     try {
-      const savedProject = await saveProject(currentProject);
-      set({ currentProject: { ...currentProject, id: savedProject.id } });
-      toast.success("Suggestion saved!");
+      // ✅ Convert analysis + animation into aiSuggestions for backend
+      const payload = {
+        fileUrl: currentProject.fileUrl,
+        gear: currentProject.gear,
+        aiSuggestions: {
+          angles: currentProject.analysis.angles,
+          settings: currentProject.analysis.settings,
+          environment: currentProject.analysis.environment,
+          shotPlan: currentProject.animation.shotPlan,
+          ...(currentProject.type === "video" && {
+            scenes: currentProject.animation.scenes || [],
+          }),
+        },
+        type: currentProject.type,
+        title: currentProject.title,
+      };
+
+      const savedProject = await saveCurrentProject(payload);
+      set({ currentProject: { ...currentProject, id: savedProject.data.id } });
+
+      toast.success("💾 Project saved!");
+      await refreshSuggestions();
     } catch (error) {
-      console.error("Failed to save suggestion:", error);
-      toast.error("Failed to save suggestion");
+      console.error("Failed to save project:", error);
+      toast.error("Failed to save project");
+    } finally {
+      set({ isSaving: false });
+    }
+  },
+
+  refreshSuggestions: async () => {
+    try {
+      const suggestions = await getSuggestions();
+      set({ suggestions });
+    } catch (error) {
+      console.error("Failed to refresh suggestions:", error);
+      toast.error("Failed to load suggestions");
     }
   },
 
   exportShotPlan: () => {
     const { currentProject } = get();
-    if (!currentProject?.shotPlan && !currentProject?.videoScenes) {
+    if (
+      !currentProject?.animation?.shotPlan &&
+      !currentProject?.animation?.scenes
+    ) {
       toast.error("No shot plan or video scenes to export");
       return;
     }
@@ -192,10 +227,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       project: currentProject.title,
       type: currentProject.type,
       gear: currentProject.gear,
-      ...(currentProject.shotPlan && { shotPlan: currentProject.shotPlan }),
-      ...(currentProject.videoScenes && {
-        videoScenes: currentProject.videoScenes,
-      }),
+      analysis: currentProject.analysis,
+      animation: currentProject.animation,
       exportedAt: new Date().toISOString(),
     };
 
@@ -211,6 +244,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success("Shot plan exported!");
+    toast.success("📤 Shot plan exported!");
   },
 }));

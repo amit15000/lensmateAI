@@ -5,12 +5,14 @@ import { Play, Pause, Maximize, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShotPlanAnimation } from "@/components/ShotPlanAnimation";
 import { useProjectStore } from "@/store/useProjectStore";
+import { toast } from "react-hot-toast"; // ✅ For success/error feedback
 
 export function AIAnalysisPanel() {
   const { currentProject, isAnalyzing, saveCurrentSuggestion } =
     useProjectStore();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (isAnalyzing) {
     return <AnalysisLoader />;
@@ -28,6 +30,19 @@ export function AIAnalysisPanel() {
       </div>
     );
   }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await saveCurrentSuggestion();
+      toast.success("Project saved successfully!");
+    } catch (err) {
+      console.error("Save failed:", err);
+      toast.error("Failed to save project.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -56,29 +71,6 @@ export function AIAnalysisPanel() {
             {currentProject.analysis?.framing ||
               "For this scene, I recommend a low-angle shot with the 24-70mm lens at around 35mm. This will emphasize the height and grandeur while maintaining context with the foreground."}
           </p>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs text-gray-400">Composition</p>
-              <p className="text-sm">Framing</p>
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="link"
-                size="sm"
-                className="text-blue-400 p-0 h-auto"
-              >
-                Rule of Thirds
-              </Button>
-              <Button
-                variant="link"
-                size="sm"
-                className="text-blue-400 p-0 h-auto"
-              >
-                Wide Establishing Shot
-              </Button>
-            </div>
-          </div>
         </div>
 
         {/* Camera Settings */}
@@ -89,10 +81,6 @@ export function AIAnalysisPanel() {
             </div>
             <h3 className="font-semibold">Camera Settings</h3>
           </div>
-
-          <p className="text-gray-300 text-sm">
-            To capture the dynamic range against the sky, I suggest:
-          </p>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
@@ -158,11 +146,12 @@ export function AIAnalysisPanel() {
         {/* Save Button */}
         <div className="flex justify-center">
           <Button
-            onClick={saveCurrentSuggestion}
+            onClick={handleSave}
+            disabled={saving}
             className="bg-gray-700 hover:bg-gray-600 text-white"
           >
             <Bookmark className="w-4 h-4 mr-2" />
-            Save Current Suggestion
+            {saving ? "Saving..." : "Save Current Suggestion"}
           </Button>
         </div>
       </div>
@@ -173,6 +162,7 @@ export function AIAnalysisPanel() {
 function AnalysisLoader() {
   return (
     <div className="space-y-6">
+      {/* Loader content */}
       <div className="flex items-center space-x-3">
         <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -185,28 +175,6 @@ function AnalysisLoader() {
         </div>
         <div className="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden">
           <div className="bg-blue-600 h-full w-3/4 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Skeleton loaders */}
-      <div className="space-y-4">
-        <div className="bg-gray-800 rounded-lg p-4 space-y-3">
-          <div className="shimmer h-4 bg-gray-700 rounded w-1/3" />
-          <div className="shimmer h-3 bg-gray-700 rounded w-full" />
-          <div className="shimmer h-3 bg-gray-700 rounded w-2/3" />
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-4 space-y-3">
-          <div className="shimmer h-4 bg-gray-700 rounded w-1/4" />
-          <div className="grid grid-cols-3 gap-4">
-            <div className="shimmer h-12 bg-gray-700 rounded" />
-            <div className="shimmer h-12 bg-gray-700 rounded" />
-            <div className="shimmer h-12 bg-gray-700 rounded" />
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="shimmer h-64 bg-gray-700 rounded" />
         </div>
       </div>
     </div>

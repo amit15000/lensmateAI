@@ -6,18 +6,38 @@ export const analyzeVideoAI = async (frameUrls, gear) => {
   const messages = [
     {
       role: "system",
-      content: `You are a cinematic assistant. Analyze multiple frames from a video and return STRICT JSON ONLY:
+      content: `You are an **award-winning cinematographer and video director**.
+Analyze a sequence of frames and return cinematic camera suggestions.
+
+Return STRICT JSON ONLY in this format:
 {
+  "title": "2-4 word cinematic title",
+  "angles": "Overall best cinematic angle",
+  "settings": {
+    "aperture": "f/x.x",
+    "ISO": "numeric",
+    "shutter": "1/xxx"
+  },
+  "shotPlan": {
+    "path": [{ "x":0, "y":2, "z":5, "pitch":0, "yaw":0, "roll":0, "duration":3 }],
+    "lookAt": { "x":0, "y":1, "z":0 }
+  },
+  "environment": {
+    "lighting": "Describe scene lighting",
+    "mood": "Cinematic mood tone"
+  },
   "scenes": [
     {
       "sceneId": 1,
-      "description": "string",
-      "angles": "string",
-      "settings": { "aperture": "f/2.8", "ISO": "100", "shutter": "1/120" },
+      "title": "Scene title",
+      "description": "Brief cinematic description",
+      "angles": "Best angle",
+      "settings": { "aperture": "f/x.x", "ISO": "xxx", "shutter": "1/xxx" },
       "shotPlan": {
-        "path": [{ "x":0, "y":2, "z":5, "pitch":0, "yaw":0, "roll":0, "duration":3 }],
-        "lookAt": { "x":0, "y":1, "z":0 }
-      }
+        "path": [{ "x":0,"y":2,"z":5,"pitch":0,"yaw":0,"roll":0,"duration":3 }],
+        "lookAt": { "x":0,"y":1,"z":0 }
+      },
+      "environment": { "lighting": "Scene lighting", "mood": "Scene mood" }
     }
   ]
 }`,
@@ -25,30 +45,27 @@ export const analyzeVideoAI = async (frameUrls, gear) => {
     {
       role: "user",
       content: [
-        { type: "text", text: `Gear: ${JSON.stringify(gear)}` },
+        { type: "text", text: `Camera Gear: ${JSON.stringify(gear)}` },
         ...frameUrls.map((url) => ({ type: "image_url", image_url: { url } })),
       ],
     },
   ];
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4.1",
     messages,
   });
 
   let content = response.choices[0].message.content.trim();
-
-  // ✅ Remove Markdown fences if present
   content = content
     .replace(/```json/gi, "")
     .replace(/```/g, "")
     .trim();
 
-  console.log("Raw AI Output:", content); // Debugging log
+  console.log("Raw AI Output:", content);
 
-  // ✅ Extract JSON inside braces
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("AI did not return valid JSON");
 
-  return JSON.parse(jsonMatch[0]);
+  return JSON.parse(jsonMatch[0]); // ✅ Returns aiSuggestions structured like image
 };
