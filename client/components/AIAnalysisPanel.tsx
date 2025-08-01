@@ -1,18 +1,19 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Play, Pause, Maximize, Bookmark } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ShotPlanAnimation } from "@/components/ShotPlanAnimation"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useState } from "react";
+import { Play, Pause, Maximize, Bookmark } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ShotPlanAnimation } from "@/components/ShotPlanAnimation";
+import { useProjectStore } from "@/store/useProjectStore";
 
 export function AIAnalysisPanel() {
-  const { currentProject, isAnalyzing, saveCurrentSuggestion } = useProjectStore()
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const { currentProject, isAnalyzing, saveCurrentSuggestion } =
+    useProjectStore();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   if (isAnalyzing) {
-    return <AnalysisLoader />
+    return <AnalysisLoader />;
   }
 
   if (!currentProject) {
@@ -25,7 +26,7 @@ export function AIAnalysisPanel() {
           <p>Upload a scene and select your gear to get started</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -37,8 +38,8 @@ export function AIAnalysisPanel() {
             <span className="text-sm">🤖</span>
           </div>
           <p className="text-gray-300">
-            Welcome to Lensmate AI! I've analyzed your {currentProject.type} scene and gear setup. Here are my cinematic
-            suggestions:
+            Welcome to Lensmate AI! I've analyzed your {currentProject.type}{" "}
+            scene and gear setup. Here are my cinematic suggestions:
           </p>
         </div>
 
@@ -62,10 +63,18 @@ export function AIAnalysisPanel() {
               <p className="text-sm">Framing</p>
             </div>
             <div className="flex space-x-2">
-              <Button variant="link" size="sm" className="text-blue-400 p-0 h-auto">
+              <Button
+                variant="link"
+                size="sm"
+                className="text-blue-400 p-0 h-auto"
+              >
                 Rule of Thirds
               </Button>
-              <Button variant="link" size="sm" className="text-blue-400 p-0 h-auto">
+              <Button
+                variant="link"
+                size="sm"
+                className="text-blue-400 p-0 h-auto"
+              >
                 Wide Establishing Shot
               </Button>
             </div>
@@ -81,7 +90,9 @@ export function AIAnalysisPanel() {
             <h3 className="font-semibold">Camera Settings</h3>
           </div>
 
-          <p className="text-gray-300 text-sm">To capture the dynamic range against the sky, I suggest:</p>
+          <p className="text-gray-300 text-sm">
+            To capture the dynamic range against the sky, I suggest:
+          </p>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
@@ -92,11 +103,15 @@ export function AIAnalysisPanel() {
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">ISO</p>
-              <p className="text-lg font-mono text-blue-400">{currentProject.analysis?.settings?.iso || "100"}</p>
+              <p className="text-lg font-mono text-blue-400">
+                {currentProject.analysis?.settings?.iso || "100"}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Shutter</p>
-              <p className="text-lg font-mono text-blue-400">{currentProject.analysis?.settings?.shutter || "1/125"}</p>
+              <p className="text-lg font-mono text-blue-400">
+                {currentProject.analysis?.settings?.shutter || "1/125"}
+              </p>
             </div>
           </div>
         </div>
@@ -106,32 +121,53 @@ export function AIAnalysisPanel() {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Shot Plan Animation</h3>
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(!isFullscreen)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+              >
                 <Maximize className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setIsPlaying(!isPlaying)}>
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? (
+                  <Pause className="w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>
 
           <div
-            className={`relative ${isFullscreen ? "fixed inset-0 z-50 bg-black" : "h-64"} rounded-lg overflow-hidden`}
+            className={`relative ${
+              isFullscreen ? "fixed inset-0 z-50 bg-black" : "h-64"
+            } rounded-lg overflow-hidden`}
           >
-            <ShotPlanAnimation shotPlan={currentProject.shotPlan} isPlaying={isPlaying} isFullscreen={isFullscreen} />
+            <ShotPlanAnimation
+              shotPlan={currentProject.shotPlan}
+              isPlaying={isPlaying}
+              isFullscreen={isFullscreen}
+            />
           </div>
         </div>
 
         {/* Save Button */}
         <div className="flex justify-center">
-          <Button onClick={saveCurrentSuggestion} className="bg-gray-700 hover:bg-gray-600 text-white">
+          <Button
+            onClick={saveCurrentSuggestion}
+            className="bg-gray-700 hover:bg-gray-600 text-white"
+          >
             <Bookmark className="w-4 h-4 mr-2" />
             Save Current Suggestion
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function AnalysisLoader() {
@@ -143,7 +179,9 @@ function AnalysisLoader() {
         </div>
         <div>
           <h3 className="font-semibold">AI Analysis in Progress</h3>
-          <p className="text-sm text-gray-400">Analyzing scene and gear compatibility...</p>
+          <p className="text-sm text-gray-400">
+            Analyzing scene and gear compatibility...
+          </p>
         </div>
         <div className="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden">
           <div className="bg-blue-600 h-full w-3/4 animate-pulse" />
@@ -172,5 +210,5 @@ function AnalysisLoader() {
         </div>
       </div>
     </div>
-  )
+  );
 }

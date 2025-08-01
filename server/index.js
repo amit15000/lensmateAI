@@ -5,6 +5,7 @@ import { connectDB } from "./config/db.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import analyzeImageRoutes from "./routes/analyzeImageRoutes.js";
 import analyzeVideoRoutes from "./routes/analyzeVideoRoutes.js";
+import saveAnalysisRoutes from "./routes/saveAnalysisRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 dotenv.config();
 const app = express();
@@ -25,6 +26,7 @@ connectDB();
 app.use("/api/upload", uploadRoutes);
 app.use("/api/analyze/image", analyzeImageRoutes);
 app.use("/api/analyze/video", analyzeVideoRoutes);
+app.use("/api/saveAnalysis", saveAnalysisRoutes);
 // Error Handler
 app.use(errorHandler);
 

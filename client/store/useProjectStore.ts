@@ -78,7 +78,7 @@ interface Project {
   gear: Gear;
   analysis?: Analysis;
   shotPlan?: ShotPlan;
-  videoScenes?: VideoScene[]; // ✅ For video analysis
+  videoScenes?: VideoScene[];
   timestamp: string;
 }
 
@@ -89,7 +89,6 @@ interface ProjectStore {
   isUploading: boolean;
   isAnalyzing: boolean;
 
-  // Actions
   setUploadedFile: (file: UploadedFile | null) => void;
   setGear: (gear: Gear) => void;
   setIsUploading: (loading: boolean) => void;
@@ -114,19 +113,18 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({ isAnalyzing: true });
     try {
       let response;
+
       if (file.type === "image") {
-        const res = await analyzeImage({ fileUrl: file.url, gear });
-        response = res.data; // ✅ Backend returns { success, data }
+        response = await analyzeImage({ fileUrl: file.url, gear });
       } else {
-        const res = await analyzeVideo({ fileUrl: file.url, gear });
-        response = res.data;
+        response = await analyzeVideo({ fileUrl: file.url, gear });
       }
 
       if (!response.success || !response.data) {
         throw new Error("Invalid AI response");
       }
 
-      const aiData = response.data.aiSuggestions;
+      const aiData = response.data.aiSuggestions || response.data;
 
       const project: Project = {
         title: file.name.split(".")[0] || "Untitled Project",
@@ -142,7 +140,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               }
             : undefined,
         shotPlan: file.type === "image" ? aiData.shotPlan : undefined,
-        videoScenes: file.type === "video" ? aiData.scenes : undefined,
+        videoScenes: file.type === "video" ? aiData.scenes || [] : undefined,
         timestamp: new Date().toISOString(),
       };
 

@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const { fileUrl, gear } = await request.json();
 
-    // Validate input
+    // ✅ Validate input
     if (!fileUrl || !gear?.camera || !gear?.lens) {
       return NextResponse.json(
         { error: "fileUrl, camera, and lens are required" },
@@ -13,20 +13,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call backend API (image analysis)
+    // ✅ Correct backend endpoint: /api/analyze/image
     const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE}/image/analyze`,
+      `${process.env.NEXT_PUBLIC_API_BASE}/analyze/image`,
       { fileUrl, gear }
     );
 
+    // ✅ Check success
     if (!res.data.success) {
       throw new Error(res.data.message || "Backend returned an error");
     }
 
-    // Return AI suggestions (backend returns project with aiSuggestions)
+    // ✅ Return AI suggestions (backend sends { success, data: project })
     return NextResponse.json(res.data.data.aiSuggestions);
-  } catch (error) {
-    console.error("Analysis error:", error.message || error);
+  } catch (error: any) {
+    console.error(
+      "Analysis error:",
+      error.response?.data || error.message || error
+    );
     return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
   }
 }

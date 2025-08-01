@@ -5,12 +5,10 @@ export const analyzeImage = async (req, res) => {
   try {
     const { fileUrl, gear } = req.body;
     if (!fileUrl || !gear?.camera || !gear?.lens) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "fileUrl, camera, and lens required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "fileUrl, camera, and lens required",
+      });
     }
 
     const aiContent = await analyzeImageAI(fileUrl, gear);
@@ -23,6 +21,7 @@ export const analyzeImage = async (req, res) => {
       gear,
       aiSuggestions: suggestions,
     });
+    console.log(project);
     res.status(200).json({ success: true, data: project });
   } catch (err) {
     res
