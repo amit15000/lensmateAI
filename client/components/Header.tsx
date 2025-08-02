@@ -13,7 +13,6 @@ export function Header() {
   const [title, setTitle] = useState(currentProject?.title || "Untitled");
   const router = useRouter();
 
-  // ✅ Sync title with store updates
   useEffect(() => {
     setTitle(currentProject?.title || "Untitled");
   }, [currentProject?.title]);
@@ -25,9 +24,7 @@ export function Header() {
 
   return (
     <header className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6">
-      {/* Left Section */}
       <div className="flex items-center space-x-4">
-        {/* Logo */}
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <FileText className="w-4 h-4" />
@@ -38,11 +35,9 @@ export function Header() {
           </div>
         </div>
 
-        {/* Project Info */}
         <div className="flex items-center space-x-2 text-sm text-gray-400">
           <FileText className="w-4 h-4" />
 
-          {/* ✅ New Project just routes to '/' */}
           <button
             onClick={() => router.push("/")}
             className="hover:text-white transition-colors"
@@ -52,7 +47,6 @@ export function Header() {
 
           <span className="text-gray-600">|</span>
 
-          {/* Editable Title */}
           <div className="flex items-center space-x-1">
             {isEditing ? (
               <input
@@ -77,7 +71,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Right Section */}
       <div className="flex items-center space-x-2">
         <Button
           variant="outline"

@@ -16,7 +16,7 @@ interface Project {
   timestamp: string;
   fileUrl?: string;
   gear?: any;
-  aiSuggestions?: any; // <-- Added this property
+  aiSuggestions?: any;
 }
 
 export function SuggestionsFeed() {
@@ -73,12 +73,12 @@ export function SuggestionsFeed() {
     }
   };
 
-  // ✅ Human-readable timestamp formatter
+  // timestamp formatter
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
 
     if (isToday(date)) {
-      return `Today`; // e.g. Today at 4:30 PM
+      return `Today`; // e.g. Today
     }
     if (isYesterday(date)) {
       return `Yesterday`;

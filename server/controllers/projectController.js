@@ -4,7 +4,6 @@ export const getSuggestions = async (req, res) => {
   try {
     const { currentProjectId } = req.query;
 
-    // ✅ Fetch only image-type projects
     const allImageProjects = await Project.find({ type: "image" }).sort({
       createdAt: -1,
     });
@@ -15,20 +14,17 @@ export const getSuggestions = async (req, res) => {
       const current = await Project.findById(currentProjectId);
 
       if (current && current.type === "image") {
-        // Pick current image project + 2 random image projects
         const others = allImageProjects.filter(
           (p) => p.id !== currentProjectId
         );
         const randomTwo = others.sort(() => 0.5 - Math.random()).slice(0, 2);
         suggestions = [current, ...randomTwo];
       } else {
-        // If current project is a video or doesn't exist, pick 3 random images
         suggestions = allImageProjects
           .sort(() => 0.5 - Math.random())
           .slice(0, 3);
       }
     } else {
-      // Fresh start: pick 3 random images
       suggestions = allImageProjects
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
@@ -59,7 +55,7 @@ export const saveProject = async (req, res) => {
     const savedProject = await Project.create({
       fileUrl,
       gear,
-      aiSuggestions, // For video: contains scenes array inside
+      aiSuggestions,
       type,
       title,
       timestamp: new Date(),

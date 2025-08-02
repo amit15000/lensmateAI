@@ -2,7 +2,7 @@ import openai from "../../config/openai.js";
 
 export const analyzeImageAI = async (fileUrl, gear) => {
   const aiResponse = await openai.chat.completions.create({
-    model: "gpt-4.1", // ✅ Best at reasoning + vision
+    model: "gpt-4.1",
     messages: [
       {
         role: "system",
