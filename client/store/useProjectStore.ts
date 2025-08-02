@@ -1,5 +1,3 @@
-"use client";
-
 import { create } from "zustand";
 import {
   analyzeImage,
@@ -9,8 +7,6 @@ import {
 } from "@/utils/api";
 import toast from "react-hot-toast";
 import api from "@/utils/api";
-
-// ---------------- Interfaces ----------------
 
 interface UploadedFile {
   url: string;
@@ -33,10 +29,7 @@ interface Analysis {
     fov?: string;
     focusDistance?: string;
   };
-  environment: {
-    lighting: string;
-    mood: string;
-  };
+  environment: { lighting: string; mood: string };
 }
 
 interface ShotPlan {
@@ -97,9 +90,8 @@ interface ProjectStore {
   saveCurrentSuggestion: () => Promise<void>;
   refreshSuggestions: () => Promise<void>;
   exportShotPlan: () => void;
+  updateProjectTitle: (title: string) => void;
 }
-
-// ---------------- Zustand Store ----------------
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   uploadedFile: null,
@@ -128,7 +120,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const aiData = response.data.aiSuggestions || response.data;
 
       const project: Project = {
-        title: aiData.title || file.name.split(".")[0] || "Untitled Project",
+        title: aiData.title || file.name.split(".")[0] || "Untitled",
         type: file.type,
         fileUrl: file.url,
         gear,
@@ -173,7 +165,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({ isSaving: true });
     try {
-      // ✅ Convert analysis + animation into aiSuggestions for backend
       const payload = {
         fileUrl: currentProject.fileUrl,
         gear: currentProject.gear,
@@ -238,7 +229,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${currentProject.title}-plan.json`;
+    a.download = `${currentProject.title || "Untitled"}-plan.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -246,4 +237,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     toast.success("📤 Shot plan exported!");
   },
+
+  updateProjectTitle: (title: string) =>
+    set((state) => ({
+      currentProject: state.currentProject
+        ? { ...state.currentProject, title }
+        : null,
+    })),
 }));

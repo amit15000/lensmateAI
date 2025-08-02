@@ -11,17 +11,10 @@ export const analyzeVideo = async (req, res) => {
         .json({ success: false, message: "fileUrl and gear are required" });
     }
 
-    console.log("🎬 Starting video analysis for:", fileUrl);
-
-    // ✅ Step 1: Extract frames (limit to 8 for diversity)
     const frames = await extractFrames(fileUrl, "temp/frames", true);
-    console.log(`✅ Frame extraction complete. Total frames: ${frames.length}`);
 
-    // ✅ Step 2: Pick a subset of 5 frames for AI (avoid overload)
-    const selectedFrames = frames.slice(0, 5);
-    console.log("📸 Selected frames:", selectedFrames);
+    const selectedFrames = frames.slice(0, 7);
 
-    // ✅ Step 3: Upload selected frames to Cloudinary (with compression)
     const uploadedFrameUrls = [];
     for (const frame of selectedFrames) {
       const url = await uploadToCloudinary(frame, {
@@ -29,8 +22,6 @@ export const analyzeVideo = async (req, res) => {
       });
       uploadedFrameUrls.push(url);
     }
-
-    console.log("☁️ Uploaded frame URLs:", uploadedFrameUrls);
 
     // ✅ Step 4: Analyze frames using OpenAI Vision
     const aiSuggestions = await analyzeVideoAI(uploadedFrameUrls, gear);

@@ -5,7 +5,8 @@ import { Clock, ImageIcon, Video, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { getSuggestions, saveCurrentProject } from "@/utils/api";
-import { toast } from "react-hot-toast"; // ✅ For notifications
+import { toast } from "react-hot-toast";
+import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns"; // ✅ Import
 
 interface Project {
   id: string;
@@ -15,7 +16,7 @@ interface Project {
   timestamp: string;
   fileUrl?: string;
   gear?: any;
-  aiSuggestions?: any;
+  aiSuggestions?: any; // <-- Added this property
 }
 
 export function SuggestionsFeed() {
@@ -64,12 +65,25 @@ export function SuggestionsFeed() {
         title: currentProject.title,
       });
       toast.success("Project saved successfully!");
-      loadSuggestions(); // ✅ Refresh suggestions after saving
+      loadSuggestions();
     } catch (err: any) {
       toast.error(err.message || "Failed to save project");
     } finally {
       setSaving(false);
     }
+  };
+
+  // ✅ Human-readable timestamp formatter
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+
+    if (isToday(date)) {
+      return `Today`; // e.g. Today at 4:30 PM
+    }
+    if (isYesterday(date)) {
+      return `Yesterday`;
+    }
+    return formatDistanceToNow(date, { addSuffix: true }); // e.g. "3 days ago"
   };
 
   if (loading) return <SuggestionsFeedSkeleton />;
@@ -124,7 +138,7 @@ export function SuggestionsFeed() {
               <div className="flex items-center space-x-1 mt-1">
                 <Clock className="w-3 h-3 text-gray-400" />
                 <span className="text-xs text-gray-400">
-                  {project.timestamp}
+                  {formatTimestamp(project.timestamp)}
                 </span>
               </div>
             </div>
